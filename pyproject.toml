@@ -1,0 +1,36 @@
+[project]
+name = "slmbench"
+version = "0.1.0"
+description = "Benchmark SLM zero-shot vs classical ML for support-ticket classification"
+requires-python = ">=3.12"
+dependencies = [
+    "datasets>=5.2.0",
+    "matplotlib>=3.11.2",
+    "mlx-lm>=0.32.2",
+    "pandas>=3.1.1",
+    "psutil>=7.2.2",
+    "pyarrow>=26.0.1",
+    "scikit-learn>=1.9.1",
+    "sentence-transformers>=6.3.0",
+    "xgboost>=3.4.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.10.11,<0.11.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.6",
+]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
