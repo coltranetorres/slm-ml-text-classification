@@ -1,8 +1,7 @@
 # CLAUDE.md
 
 ## Purpose
-Mini-research sprint: **when does a small language model (SLM) beat classical ML for support-ticket
-classification?** Compares TF-IDF+LogReg, TF-IDF+SVM, MiniLM embeddings+XGBoost, and zero-shot
+Mini-research sprint: **how does a zero-shot small language model (SLM) compare with classical ML for support-ticket classification, and is an SLM necessary for simple tasks?** Compares TF-IDF+LogReg, TF-IDF+SVM, MiniLM embeddings+XGBoost, and zero-shot
 `gemma-3-1b-it` on accuracy, macro F1, latency and memory, across training-set sizes and label
 granularities. Spec: `docs/superpowers/specs/`. Plan: `docs/superpowers/plans/`.
 

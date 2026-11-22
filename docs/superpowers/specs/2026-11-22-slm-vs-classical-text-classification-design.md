@@ -3,7 +3,7 @@
 Date: 2026-11-22 · Status: approved · Size: mini-research sprint
 
 ## Intent
-Answer: **when does a small language model (SLM) outperform traditional ML classifiers on customer-support ticket classification — and is an SLM even necessary for simple tasks?** Output is a small, reproducible experiment plus a short results writeup (table + crossover chart). Owner is a solo researcher; speed and a clear answer beat polish.
+Answer: **How does a zero-shot SLM compare with classical ML classifiers on support-ticket classification (accuracy, macro F1, latency, memory) as training data and label granularity vary — and is an SLM necessary for simple classification at all?** The sweep is what lets us say *where*, if anywhere, the ranking flips. Output is a small, reproducible experiment plus a short results writeup (table + crossover chart). Owner is a solo researcher; speed and a clear answer beat polish.
 
 ## Goals
 - Compare four models on one real-looking public ticket dataset:
