@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
 import pandas as pd
 
-from slmbench.bench import run_isolated
+from slmbench.bench import run_isolated, summarize_latencies
 from slmbench.data import Splits, load_tickets, make_splits, subsample
 from slmbench.metrics import evaluate
 from slmbench.models import build_tfidf_lr, build_tfidf_svm
@@ -118,6 +119,52 @@ def run_zeroshot(
         rows.append({"model": name, "granularity": gran, "n_train": 0, "seed": 0, **res})
         pd.DataFrame(rows).to_csv(out_csv, index=False)
         log.info("%s %s f1=%.3f", name, gran, res["macro_f1"])
+    return pd.DataFrame(rows)
+
+
+def run_api_zeroshot(
+    make_classifier: Callable[[list[str]], object],
+    name: str,
+    granularities: Sequence[str],
+    out_csv: Path,
+    df: pd.DataFrame | None = None,
+    n_latency: int = 50,
+) -> pd.DataFrame:
+    """Score a remote (API) zero-shot model on the shared test set; append rows to out_csv.
+
+    Accuracy/F1 are comparable with the local models. Latency is network + remote inference,
+    measured on uncached sequential calls. Memory and throughput are not meaningful for a
+    remote model and are left blank (NaN).
+    """
+    out_csv = Path(out_csv)
+    rows = pd.read_csv(out_csv).to_dict("records") if out_csv.exists() else []
+    done = {tuple(r[k] for k in KEY) for r in rows}
+    splits = make_splits(load_tickets() if df is None else df, seed=0)
+    nan = float("nan")
+    for gran in granularities:
+        if (name, gran, 0, 0) in done:
+            continue
+        col = f"label_{gran}"
+        test = splits.test
+        clf = make_classifier(sorted(set(splits.train[col]) | set(test[col])))
+        metrics = evaluate(test[col].tolist(), clf.predict(test.text.tolist()))
+        ms = []
+        for text in test.text.tolist()[:n_latency]:
+            t0 = time.perf_counter()
+            clf.predict_one(text, use_cache=False)
+            ms.append((time.perf_counter() - t0) * 1000)
+        p50, p95 = summarize_latencies(ms)
+        res = {
+            **metrics,
+            "p50_ms": p50,
+            "p95_ms": p95,
+            "throughput_per_s": nan,
+            "peak_rss_mb": nan,
+            "peak_mlx_mb": 0.0,
+        }
+        rows.append({"model": name, "granularity": gran, "n_train": 0, "seed": 0, **res})
+        pd.DataFrame(rows).to_csv(out_csv, index=False)
+        log.info("%s %s f1=%.3f acc=%.3f", name, gran, metrics["macro_f1"], metrics["accuracy"])
     return pd.DataFrame(rows)
 
 

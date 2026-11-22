@@ -136,3 +136,45 @@ def test_zeroshot_spec_carries_model_id(tmp_path):
         workdir=tmp_path / "w",
     )
     assert seen == [{"kind": "zeroshot", "model_id": "org/big-model"}]
+
+
+class FakeApiClf:
+    def __init__(self, labels):
+        self.labels = labels
+        self.one_calls = []
+
+    def predict(self, texts):
+        return [self.labels[0]] * len(texts)
+
+    def predict_one(self, text, use_cache=True):
+        self.one_calls.append(use_cache)
+        return self.labels[0]
+
+
+def test_run_api_zeroshot_rows_and_blank_local_metrics(tmp_path):
+    import math
+
+    from slmbench.sweep import run_api_zeroshot
+
+    made = []
+
+    def factory(labels):
+        made.append(FakeApiClf(labels))
+        return made[-1]
+
+    kw = dict(
+        name="api-zeroshot",
+        granularities=["coarse", "fine"],
+        out_csv=tmp_path / "r.csv",
+        df=toy(),
+        n_latency=5,
+    )
+    out = run_api_zeroshot(factory, **kw)
+    assert set(out.model) == {"api-zeroshot"} and len(out) == 2
+    row = out.iloc[0]
+    assert math.isnan(row.peak_rss_mb) and math.isnan(row.throughput_per_s)
+    assert row.p50_ms >= 0 and 0 <= row.macro_f1 <= 1
+    assert all(c is False for m in made for c in m.one_calls)  # latency calls bypass the cache
+    assert len(made[0].one_calls) == 5
+    run_api_zeroshot(factory, **kw)
+    assert len(made) == 2  # resumable: nothing re-run
