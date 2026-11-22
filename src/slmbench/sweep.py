@@ -90,6 +90,37 @@ def run_sweep(
     return pd.DataFrame(rows)
 
 
+def run_zeroshot(
+    model_id: str,
+    name: str,
+    granularities: Sequence[str],
+    out_csv: Path,
+    df: pd.DataFrame | None = None,
+    runner: Callable[..., dict] = run_isolated,
+    workdir: Path = Path("data/sweep"),
+) -> pd.DataFrame:
+    """Run only one zero-shot SLM (once per granularity) and append its rows to out_csv.
+
+    Uses the same split and test set as run_sweep, so rows are directly comparable.
+    """
+    out_csv, workdir = Path(out_csv), Path(workdir)
+    workdir.mkdir(parents=True, exist_ok=True)
+    rows = pd.read_csv(out_csv).to_dict("records") if out_csv.exists() else []
+    done = {tuple(r[k] for k in KEY) for r in rows}
+    splits = make_splits(load_tickets() if df is None else df, seed=0)
+    for gran in granularities:
+        if (name, gran, 0, 0) in done:
+            continue
+        col = f"label_{gran}"
+        test_path = _write(splits.test, col, workdir / f"test_{gran}.parquet")
+        train_path = _write(splits.train.head(1), col, workdir / f"zs_train_{gran}.parquet")
+        res = runner({"kind": "zeroshot", "model_id": model_id}, train_path, test_path)
+        rows.append({"model": name, "granularity": gran, "n_train": 0, "seed": 0, **res})
+        pd.DataFrame(rows).to_csv(out_csv, index=False)
+        log.info("%s %s f1=%.3f", name, gran, res["macro_f1"])
+    return pd.DataFrame(rows)
+
+
 def aggregate(raw: pd.DataFrame) -> pd.DataFrame:
     """Mean and std over seeds per (model, granularity, n_train)."""
     metrics = [

@@ -42,3 +42,21 @@ def test_subsample_smaller_than_class_count_does_not_raise():
 def test_subsample_larger_than_train_returns_all():
     train = make_splits(toy(), seed=0).train
     assert len(subsample(train, 10_000, seed=0)) == len(train)
+
+
+def test_clean_tickets_drops_duplicate_texts_and_rare_classes():
+    from slmbench.data import clean_tickets
+
+    raw = pd.DataFrame(
+        {
+            "subject": ["a", "a", "b"] + [f"s{i}" for i in range(12)],
+            "body": ["x", "x", "y"] + ["z"] * 12,
+            "type": ["Incident"] * 15,
+            "queue": ["Q1"] * 3 + ["Q2"] * 12,
+            "language": ["en"] * 15,
+        }
+    )
+    out = clean_tickets(raw, min_class_count=2)
+    assert out.text.is_unique
+    assert len(out) == 14  # one exact duplicate removed
+    assert list(out.columns) == ["text", "label_coarse", "label_fine"]

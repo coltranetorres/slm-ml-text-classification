@@ -83,3 +83,56 @@ def test_aggregate_mean_std():
     agg = aggregate(raw)
     row = agg.iloc[0]
     assert abs(row.macro_f1_mean - 0.3) < 1e-9 and abs(row.macro_f1_std - 0.1414213562) < 1e-6
+
+
+def test_run_zeroshot_appends_named_rows_and_is_resumable(tmp_path):
+    from slmbench.sweep import run_zeroshot
+
+    stub, calls = make_stub()
+    out_csv = tmp_path / "raw.csv"
+    sweep(tmp_path, stub)  # existing classical + 1B rows
+    before = len(pd.read_csv(out_csv))
+    kw = dict(
+        model_id="org/big-model",
+        name="big-zeroshot",
+        granularities=["coarse", "fine"],
+        out_csv=out_csv,
+        df=toy(),
+        runner=stub,
+        workdir=tmp_path / "w",
+    )
+    out = run_zeroshot(**kw)
+    assert len(out) == before + 2
+    assert set(out[out.model == "big-zeroshot"].granularity) == {"coarse", "fine"}
+    n = len(calls)
+    run_zeroshot(**kw)
+    assert len(calls) == n  # resumable: nothing re-run
+
+
+def test_zeroshot_spec_carries_model_id(tmp_path):
+    from slmbench.sweep import run_zeroshot
+
+    seen = []
+
+    def stub(spec, train_path, test_path, **kw):
+        seen.append(spec)
+        return {
+            "accuracy": 0.5,
+            "macro_f1": 0.4,
+            "p50_ms": 1.0,
+            "p95_ms": 2.0,
+            "throughput_per_s": 1.0,
+            "peak_rss_mb": 1.0,
+            "peak_mlx_mb": 0.0,
+        }
+
+    run_zeroshot(
+        "org/big-model",
+        "big-zeroshot",
+        ["coarse"],
+        tmp_path / "r.csv",
+        df=toy(),
+        runner=stub,
+        workdir=tmp_path / "w",
+    )
+    assert seen == [{"kind": "zeroshot", "model_id": "org/big-model"}]

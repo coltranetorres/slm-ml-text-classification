@@ -8,5 +8,6 @@ data/
 results/*
 !results/summary.csv
 !results/crossover.png
+!results/baselines.csv
 !results/.gitkeep
 .DS_Store

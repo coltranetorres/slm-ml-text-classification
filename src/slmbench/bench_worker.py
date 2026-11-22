@@ -30,9 +30,9 @@ def build_from_spec(spec: dict, labels: list[str]) -> Classifier:
 
         return build_embed_xgb(Embedder(), **spec.get("xgb", {}))
     if kind == "zeroshot":
-        from slmbench.zeroshot import ZeroShotClassifier
+        from slmbench.zeroshot import MODEL_ID, ZeroShotClassifier
 
-        return ZeroShotClassifier(labels)
+        return ZeroShotClassifier(labels, model_id=spec.get("model_id", MODEL_ID))
     raise ValueError(f"unknown model kind: {kind}")
 
 

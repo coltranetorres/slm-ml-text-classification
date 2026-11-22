@@ -24,13 +24,12 @@ class Splits:
     test: pd.DataFrame
 
 
-def load_tickets(cache: Path = CACHE_PATH) -> pd.DataFrame:
-    """English tickets with columns text, label_coarse (type), label_fine (queue)."""
-    if cache.exists():
-        return pd.read_parquet(cache)
-    from datasets import load_dataset
+def clean_tickets(raw: pd.DataFrame, min_class_count: int = MIN_CLASS_COUNT) -> pd.DataFrame:
+    """English tickets as text/label_coarse/label_fine, exact-duplicate texts removed.
 
-    raw = load_dataset(DATASET_ID)["train"].to_pandas()
+    Duplicates must go before splitting: otherwise the same ticket lands in train and test and
+    inflates every memorising model (measured: ~23% of test rows had a train twin).
+    """
     raw = raw[raw.language == "en"]
     df = pd.DataFrame(
         {
@@ -39,8 +38,18 @@ def load_tickets(cache: Path = CACHE_PATH) -> pd.DataFrame:
             "label_fine": raw["queue"],
         }
     ).dropna()
-    df = df[df.groupby("label_fine")["label_fine"].transform("size") >= MIN_CLASS_COUNT]
-    df = df.reset_index(drop=True)
+    df = df.drop_duplicates("text")
+    df = df[df.groupby("label_fine")["label_fine"].transform("size") >= min_class_count]
+    return df.reset_index(drop=True)
+
+
+def load_tickets(cache: Path = CACHE_PATH) -> pd.DataFrame:
+    """English tickets with columns text, label_coarse (type), label_fine (queue)."""
+    if cache.exists():
+        return pd.read_parquet(cache)
+    from datasets import load_dataset
+
+    df = clean_tickets(load_dataset(DATASET_ID)["train"].to_pandas())
     cache.parent.mkdir(parents=True, exist_ok=True)
     df.to_parquet(cache)
     log.info("cached %d tickets to %s", len(df), cache)

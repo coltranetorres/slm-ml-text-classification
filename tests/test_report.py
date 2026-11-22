@@ -39,3 +39,24 @@ def test_plot_crossover_writes_png(tmp_path):
     out = tmp_path / "c.png"
     plot_crossover(make_summary(raw_frame()), out)
     assert out.exists() and out.stat().st_size > 1000
+
+
+def test_majority_baseline():
+    from slmbench.report import majority_baseline
+
+    train = pd.Series(["a", "a", "b"])
+    test = pd.Series(["a", "b", "b", "b"])
+    r = majority_baseline(train, test)
+    assert r["accuracy"] == 0.25  # always predicts "a"
+
+
+def test_plot_handles_two_zeroshot_models(tmp_path):
+    raw = raw_frame()
+    extra = raw[raw.model == "gemma-3-1b-zeroshot"].copy()
+    extra["model"] = "gemma-3-4b-zeroshot"
+    extra["macro_f1"] = 0.55
+    s = make_summary(pd.concat([raw, extra]))
+    out = tmp_path / "c.png"
+    plot_crossover(s, out)
+    assert out.exists()
+    assert (s.model == "gemma-3-4b-zeroshot").sum() == 2
