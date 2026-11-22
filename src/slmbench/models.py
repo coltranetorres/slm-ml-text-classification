@@ -52,17 +52,17 @@ class _EmbedXGB:
     def __init__(self, embedder: Embedder, **xgb_params) -> None:
         params = {"n_estimators": 300, "max_depth": 6, "learning_rate": 0.1, "tree_method": "hist"}
         params.update(xgb_params)
-        self._embedder = embedder
+        self.embedder = embedder
         self._params = params
         self._le = LabelEncoder()
         self._clf = XGBClassifier(**params)
 
     def fit(self, texts: Sequence[str], labels: Sequence[str]) -> None:
         y = self._le.fit_transform(list(labels))
-        self._clf.fit(self._embedder.embed(list(texts)), y)
+        self._clf.fit(self.embedder.embed(list(texts)), y)
 
     def predict(self, texts: Sequence[str]) -> list[str]:
-        pred = np.asarray(self._clf.predict(self._embedder.embed(list(texts)))).astype(int)
+        pred = np.asarray(self._clf.predict(self.embedder.embed(list(texts)))).astype(int)
         return [str(c) for c in self._le.inverse_transform(pred)]
 
 

@@ -76,3 +76,18 @@ def test_embedder_cache_hits_disk(tmp_path):
     b = e.embed(["x", "y"])
     assert calls == [2]
     assert np.allclose(a, b)
+
+
+def test_embedder_use_cache_false_always_encodes(tmp_path):
+    calls = []
+
+    def enc(texts):
+        calls.append(len(texts))
+        return fake_encode(texts)
+
+    e = Embedder(encode_fn=enc, cache_dir=tmp_path, model_id="fake")
+    e.embed(["x"])
+    e.use_cache = False
+    e.embed(["x"])
+    assert calls == [1, 1]
+    assert len(list(tmp_path.glob("*.npy"))) == 1  # uncached call wrote nothing new

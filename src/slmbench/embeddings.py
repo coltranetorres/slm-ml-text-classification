@@ -33,6 +33,7 @@ class Embedder:
         self._encode_fn = encode_fn
         self.cache_dir = Path(cache_dir)
         self.model_id = model_id
+        self.use_cache = True  # benchmarks switch this off so timing includes real encoding
 
     def _encode(self, texts: Sequence[str]) -> np.ndarray:
         if self._encode_fn is None:
@@ -40,6 +41,8 @@ class Embedder:
         return np.asarray(self._encode_fn(texts), dtype=np.float32)
 
     def embed(self, texts: Sequence[str]) -> np.ndarray:
+        if not self.use_cache:
+            return self._encode(texts)
         h = hashlib.sha256(self.model_id.encode())
         for t in texts:
             h.update(t.encode())
