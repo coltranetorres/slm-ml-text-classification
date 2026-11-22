@@ -53,10 +53,10 @@ def test_majority_baseline():
 def test_plot_handles_two_zeroshot_models(tmp_path):
     raw = raw_frame()
     extra = raw[raw.model == "gemma-3-1b-zeroshot"].copy()
-    extra["model"] = "gemma-3-4b-zeroshot"
+    extra["model"] = "gemma-3-4b-api-zeroshot"
     extra["macro_f1"] = 0.55
     s = make_summary(pd.concat([raw, extra]))
     out = tmp_path / "c.png"
-    plot_crossover(s, out)
+    plotted = plot_crossover(s, out)
     assert out.exists()
-    assert (s.model == "gemma-3-4b-zeroshot").sum() == 2
+    assert "gemma-3-4b-api-zeroshot" in plotted and "gemma-3-1b-zeroshot" in plotted

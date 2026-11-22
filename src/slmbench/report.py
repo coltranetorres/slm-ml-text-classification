@@ -19,7 +19,7 @@ STYLE = {
     "tfidf-svm": ("#eb6834", "s", "TF-IDF + SVM"),
     "embed-xgb": ("#1baf7a", "^", "MiniLM + XGBoost"),
     ZEROSHOT: ("#6250d6", "D", "Gemma-3-1B zero-shot"),
-    "gemma-3-4b-zeroshot": ("#e87ba4", "D", "Gemma-3-4B zero-shot"),
+    "gemma-3-4b-api-zeroshot": ("#e87ba4", "D", "Gemma-3-4B zero-shot (API)"),
 }
 INK, MUTED, GRID, SURFACE = "#0b0b0b", "#52514e", "#e4e3df", "#fcfcfb"
 TITLE = {
@@ -33,10 +33,11 @@ def make_summary(raw: pd.DataFrame) -> pd.DataFrame:
     return aggregate(raw).round(4)
 
 
-def plot_crossover(summary: pd.DataFrame, out: Path) -> None:
+def plot_crossover(summary: pd.DataFrame, out: Path) -> list[str]:
     grans = [g for g in ("coarse", "fine") if g in set(summary.granularity)]
     fig, axes = plt.subplots(1, len(grans), figsize=(11, 4.4), sharey=True, facecolor=SURFACE)
     axes = [axes] if len(grans) == 1 else list(axes)
+    plotted: list[str] = []
     for ax, gran in zip(axes, grans, strict=True):
         ax.set_facecolor(SURFACE)
         part = summary[summary.granularity == gran]
@@ -44,6 +45,8 @@ def plot_crossover(summary: pd.DataFrame, out: Path) -> None:
             m = part[part.model == model].sort_values("n_train")
             if m.empty:
                 continue
+            if model not in plotted:
+                plotted.append(model)
             if model.endswith("-zeroshot"):
                 y = m.macro_f1_mean.iloc[0]
                 ax.axhline(y, color=color, lw=2, ls="--", label=label)
@@ -76,6 +79,7 @@ def plot_crossover(summary: pd.DataFrame, out: Path) -> None:
     fig.tight_layout()
     fig.savefig(out, dpi=160, facecolor=SURFACE)
     plt.close(fig)
+    return plotted
 
 
 def majority_baseline(train_labels: pd.Series, test_labels: pd.Series) -> dict[str, float]:

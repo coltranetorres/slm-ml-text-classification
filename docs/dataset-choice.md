@@ -1,9 +1,9 @@
 # Dataset choice
 
-**Chosen: `Tobi-Bueck/customer-support-tickets`, English rows only** (28,261 tickets, mean 410 chars).
+**Chosen: `Tobi-Bueck/customer-support-tickets`, English rows only, exact-duplicate texts removed** (23,748 unique tickets after dedup, from 28,261 English rows; mean ~410 chars).
 No credentials needed. Text = `subject + "\n" + body`.
 
-| Granularity | Column | Classes | TF-IDF+LR macro-F1 (quick 80/20) |
+| Granularity | Column | Classes | TF-IDF+LR macro-F1 (quick 80/20, before dedup) |
 |---|---|---|---|
 | coarse | `type` (Incident / Request / Problem / Change) | 4 | 0.877 |
 | fine | `queue` (10 support queues, 8149 … 404 per class) | 10 | 0.476 |
@@ -17,3 +17,6 @@ Candidates (`scripts/recon_datasets.py`):
 neither trivial (queue 0.48) nor saturated. Caveat: the corpus is LLM-generated and multilingual
 (we keep English only), and **`type` and `queue` are two different label spaces, not a hierarchy**
 ("coarse" = fewer classes, "fine" = more). Report this honestly in the README.
+
+**Dedup note:** ~4.5k exact-duplicate texts existed; ~23% of test rows had a train twin before dedup, which inflated
+classical scores. Deduplication happens in `slmbench.data.clean_tickets` before splitting.

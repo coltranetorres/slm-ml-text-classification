@@ -10,16 +10,22 @@ granularities. Spec: `docs/superpowers/specs/`. Plan: `docs/superpowers/plans/`.
 - `uv add <pkg>` / `uv add --dev <pkg>` — add dependencies (commit `uv.lock`)
 - `uv run pytest` — tests (`uv run pytest tests/test_x.py::test_name` for one)
 - `uv run ruff check . && uv run ruff format .` — lint + format
-- `uv run python scripts/<name>.py` — entry points (`recon_datasets`, `run_sweep`, `make_report`)
+- `uv run python scripts/<name>.py` — entry points (`recon_datasets`, `run_sweep`, `run_zeroshot`,
+  `run_api_zeroshot`, `make_report`, `smoke_zeroshot`)
 
 ## Platform
 Apple Silicon (M4 Pro, 24 GB). The SLM runs through **MLX** (`mlx-lm`), which is macOS/arm64 only.
 Models are already in `~/.cache/huggingface/hub` (`mlx-community/gemma-3-1b-it-bf16`,
 `sentence-transformers/all-MiniLM-L6-v2`). **Ask before downloading any other model or large dataset.**
 
+## Secrets and external calls
+`OPENROUTER_API_KEY` lives in `.env` (git-ignored; loaded with `load_dotenv()`). Never print, log or commit it.
+The API run sends test tickets (public synthetic data) to OpenRouter; confirm before sending anything else.
+API latency is network + remote inference and is never compared directly with local latency/memory.
+
 ## Layout
 - `src/slmbench/` — `data` (load, splits, subsample), `metrics`, `models` (classical),
-  `embeddings` (cached MiniLM), `zeroshot` (Gemma), `bench` (latency/memory), `sweep`, `report`
+  `embeddings` (cached MiniLM), `zeroshot` (local Gemma-1B), `openrouter` (Gemma-4B via API), `bench` (latency/memory), `sweep`, `report`
 - `scripts/` — thin CLI entry points only; logic lives in `src/`
 - `tests/` — unit tests; `data/` and `results/` are gitignored (except `results/summary.csv`,
   `results/crossover.png`)
@@ -28,6 +34,7 @@ Models are already in `~/.cache/huggingface/hub` (`mlx-community/gemma-3-1b-it-b
 ## Experiment rules
 - Fixed seeds everywhere; splits are stratified and deterministic.
 - The **test set is used only for final numbers**. Tune hyperparameters on val.
+- Dedupe exact-duplicate texts **before** splitting (leakage inflated scores ~0.1 F1 once).
 - Never edit raw data; derived data goes in `data/` and is regenerable.
 - Cache embeddings in `data/cache/`.
 - Benchmark latency/memory **in an isolated subprocess per model**, batch size 1 after warm-up,
@@ -46,3 +53,4 @@ Models are already in `~/.cache/huggingface/hub` (`mlx-community/gemma-3-1b-it-b
 - Commit `data/`, model weights, `.env`, or credentials.
 - Use Bitext (templated; makes the comparison trivially easy) as the dataset.
 - Fine-tune the SLM — zero-shot only.
+- Download large models without asking (the 12B Gemma does not fit in 24 GB anyway).
